@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 using PatientWebApi.Interfaces;
 using PatientWebApi.Models;
+using System.Data;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -13,14 +15,14 @@ namespace PatientWebApi.Controllers
     {
         //DBContext db = new DBContext();
         private IPatient Dbcontext;
-        public PatientsController(IPatient dbcontext)
+         public PatientsController(IPatient dbcontext)
         {
             this.Dbcontext = dbcontext;
         }
 
         //[EnableQuery]
      
-        [HttpGet]
+        [HttpGet("GetAllPatients"), Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<Patients>>> GetAllPatient()
         {
             var result = await Dbcontext.GetPatientsAsync();
@@ -30,21 +32,21 @@ namespace PatientWebApi.Controllers
 
         // GET: api/<PatientsController>
 
-        [HttpGet("{patientId}")]
-        public async Task<IActionResult> GetPatientAsync(int patientId)
+        [HttpGet("GetPatientById/{patientId}"), Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetPatientById(int patientId)
         {
             var result = await Dbcontext.GetPatientByIdAsync(patientId);
             if (result.IsSuccess)
             {
 
-                return Ok(result.Patients);
+                return Ok(result.Patients.FirstOrDefault());
 
             }
             return NotFound();
         }
 
-        [HttpPost]
-        public async Task<ActionResult<Patients>> PostOrder([FromBody] Patients obj)
+        [HttpPost("AddPatient"), Authorize(Roles = "Admin")]
+        public async Task<ActionResult<Patients>> AddPatient([FromBody] Patients obj)
         {
           var response = await Dbcontext.Add(obj);
             if (response.IsSuccess)
@@ -57,8 +59,8 @@ namespace PatientWebApi.Controllers
 
         }
 
-        [HttpPut("{Id}")]
-        public async Task<IActionResult> PutOrder(int Id, [FromBody] Patients obj)
+        [HttpPut("UpdatePatient/{Id}"), Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdatePatient(int Id, [FromBody] Patients obj)
         {
 
             var response = await Dbcontext.UpdateAsync(Id, obj);
@@ -71,13 +73,13 @@ namespace PatientWebApi.Controllers
         }
 
 
-        [HttpDelete("{Id}")]
-        public async Task<IActionResult> DeleteOrder(int Id)
+        [HttpDelete("DeletePatient/{Id}"), Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeletePatient(int Id)
         {
             var response = await Dbcontext.DeleteAsync(Id);
             if (response.IsSuccess)
             {
-                return Ok("Delete successfully");
+                return Ok(new { response.ErrorMessage });
             }
             return NoContent();
         }

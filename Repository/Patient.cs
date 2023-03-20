@@ -4,8 +4,12 @@ using System.Data;
 using PatientWebApi.Interfaces;
 using AutoMapper;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using static IdentityServer4.Models.IdentityResources;
+using System.Reflection;
+using System.Security.Cryptography;
 
-namespace PatientWebApi.Provider
+namespace PatientWebApi.Repository
 {
     public class Patient : IPatient
     {
@@ -24,28 +28,30 @@ namespace PatientWebApi.Provider
 
         public async Task<(bool IsSuccess, int Id, string ErrorMessage)> Add(Patients obj)
         {
-            string query = "insert into patient(Id,FirstName,LastName,FullName,Age,Gender,Address,City,Province,PostCode,IsActive,IsDelete) OUTPUT INSERTED.ID values('" + obj.Id + "','" + obj.FirstName + "','"
-               + obj.LastName + "','" + obj.FullName + "','" + obj.Age + "','"
-               + obj.Gender + "','" + obj.Address + "','" + obj.City + "','" + obj.Province + "','"
-               + obj.PostCode + "','" + obj.IsActive + "','" + obj.IsDelete + "')";
-            using (SqlConnection con = new SqlConnection(_dbContext))
-            {
-                using (SqlCommand cmd = new SqlCommand(query))
-                {
-                    cmd.Connection = con;
-                    if (con.State == ConnectionState.Closed)
-                        con.Open();
-                    int result = (int)cmd.ExecuteScalar();
 
-                    return (result > 0, result, null);
-                   
-                }
-            }
+                      
+            using var connection = new SqlConnection(_dbContext);
+            connection.Open();
 
-
-
-
-           // return (result > 0, order.Id, null);
+            // Create a command object that represents the stored procedure
+            using var command = new SqlCommand("PatientInfoCRUD", connection);
+            command.CommandType = CommandType.StoredProcedure;
+            command.Parameters.AddWithValue("@StatementType", "Insert");
+            command.Parameters.AddWithValue("@Id", obj.Id);
+            command.Parameters.AddWithValue("@FirstName", obj.FirstName);
+            command.Parameters.AddWithValue("@LastName", obj.LastName);
+            command.Parameters.AddWithValue("@FullName", obj.FullName);
+            command.Parameters.AddWithValue("@Age", obj.Age);
+            command.Parameters.AddWithValue("@Gender", obj.Gender);
+            command.Parameters.AddWithValue("@Address", obj.Address);
+            command.Parameters.AddWithValue("@City", obj.City);
+            command.Parameters.AddWithValue("@Province", obj.Province);
+            command.Parameters.AddWithValue("@PostCode", obj.PostCode);
+            command.Parameters.AddWithValue("@IsActive", obj.IsActive);
+            command.Parameters.AddWithValue("@IsDelete", obj.IsDelete);
+             int result = (int) command.ExecuteScalar();
+            return (result > 0, result, null);
+           
         }
 
         public async Task<(bool IsSuccess, string ErrorMessage)> DeleteAsync(int Id)
@@ -70,15 +76,14 @@ namespace PatientWebApi.Provider
             {
                 List<Patients> list = new List<Patients>();
 
-
                 string query = "Select * from patient  where Id='" + patientId + "' ";
                 using (SqlConnection con = new SqlConnection(_dbContext))
                 {
-                    using (SqlCommand cmd = new SqlCommand(query))
+                    using (SqlCommand cmd =  new SqlCommand(query))
                     {
                         cmd.Connection = con;
                         SqlDataAdapter adp = new SqlDataAdapter(cmd);
-                        DataTable dt = new DataTable();
+                        DataTable dt =  new DataTable();
                         adp.Fill(dt);
                         foreach (DataRow dr in dt.Rows)
                         {
@@ -87,7 +92,7 @@ namespace PatientWebApi.Provider
                                 Id = Convert.ToInt32(dr[0]),
                                 FirstName = Convert.ToString(dr[1]),
                                 LastName = Convert.ToString(dr[2]),
-                                FullName = Convert.ToString(dr[3]),
+                                //FullName = Convert.ToString(dr[3]),
                                 Age = (short)dr[4],
                                 Gender = Convert.ToString(dr[5]),
                                 Address = Convert.ToString(dr[6]),
@@ -138,7 +143,7 @@ namespace PatientWebApi.Provider
                                 Id = Convert.ToInt32(dr[0]),
                                 FirstName = Convert.ToString(dr[1]),
                                 LastName = Convert.ToString(dr[2]),
-                                FullName = Convert.ToString(dr[3]),
+                                //FullName = Convert.ToString(dr[3]),
                                 Age = (short)dr[4],
                                 Gender = Convert.ToString(dr[5]),
                                 Address = Convert.ToString(dr[6]),
@@ -168,7 +173,12 @@ namespace PatientWebApi.Provider
         {
             string query = "update patient " +
                  "set FirstName= '" + obj.FirstName + "'," +
-                 " LastName='" + obj.LastName + "' " +
+                 " LastName='" + obj.LastName + "', " +
+                  " fullName='" + obj.FullName + "', " +
+                   " Gender='" + obj.Gender + "', " +
+                   " Age='" + obj.Age + "', " +
+                   " Address='" + obj.Address + "' ," +
+                   " City='" + obj.City + "' " +
                  "where Id='" + Id + "' ";
             using (SqlConnection con = new SqlConnection(_dbContext))
             {
@@ -178,9 +188,11 @@ namespace PatientWebApi.Provider
                     if (con.State == ConnectionState.Closed)
                         con.Open();
                     int i = cmd.ExecuteNonQuery();
-                    return (Id>0,Id,"Update Sucessfully!");
+                    return (i > 0,Id,"Update Sucessfully!");
                 }
             }
         }
+
+       
     }
 }
